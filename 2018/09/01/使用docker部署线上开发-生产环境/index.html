@@ -1,0 +1,116 @@
+<!DOCTYPE html><html lang="zh-Hans"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="lUxkk4fds2ppe8qPA-_SK3vt3496yolijbJseIR38lM" name="google-site-verification"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="分享关于前端、后端、运维、日常的心得及体会"><title>使用Docker部署线上开发/生产环境 | 分享关于前端、后端、运维、日常的心得及体会</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=0.0.0"><link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/normalize.css/normalize.min.css"><link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/purecss/build/pure-min.min.css"><link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/purecss/build/grids-responsive-min.css"><link rel="stylesheet" href="//cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><link rel="alternate" type="application/atom+xml" href="/atom.xml"><script type="text/javascript" src="//cdn.jsdelivr.net/npm/clipboard/dist/clipboard.min.js"></script><script type="text/javascript" src="//cdn.jsdelivr.net/gh/codeseven/toastr/build/toastr.min.js"></script><link rel="stylesheet" href="//cdn.jsdelivr.net/gh/codeseven/toastr/build/toastr.min.css"><meta name="generator" content="Hexo 5.2.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">使用Docker部署线上开发/生产环境</h1><a id="logo" href="/.">风吹叶落</a><p class="description">技术分享博客</p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> Start</i></a><a href="/archives/"><i class="fa fa-archive"> Archiv</i></a><a href="/atom.xml"><i class="fa fa-rss"> RSS</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">使用Docker部署线上开发/生产环境</h1><div class="post-meta">2018-09-01<span> | </span><span class="category"><a href="/categories/%E8%BF%90%E7%BB%B4%E7%9B%B8%E5%85%B3/">运维相关</a></span></div><div class="post-content"><p>不擅长运维又很喜欢运维的我，每次在线上或者线下部署开发/生产环境时都无聊到要死，感觉就跟ctrl+c、ctrl+v似的，既浪费了大把的时间，又觉得索然无味，所以就有了这篇文章。</p>
+<p>Docker是什么？借用wikipedia上的解释：</p>
+<blockquote>
+<p>Docker是一个开放源代码软件项目，让应用程序布署在软件容器下的工作可以自动化进行，借此在Linux操作系统上，提供一个额外的软件抽象层，以及操作系统层虚拟化的自动管理机制。</p>
+</blockquote>
+<p>至于我们为什么要使用Docker？那就得说到它的众多优势了：</p>
+<ul>
+<li>更高效的利用系统资源</li>
+<li>更快的启动时间</li>
+<li>一致的运行环境</li>
+<li>持续交付和部署</li>
+<li>更轻松的迁移</li>
+<li>更轻松的维护和扩展</li>
+</ul>
+<a id="more"></a>
+
+<h1 id="安装Docker"><a href="#安装Docker" class="headerlink" title="安装Docker"></a>安装Docker</h1><p>Docker有两个版本，CE（社区版、免费）和EE（企业版、付费），这里我使用到的是社区版，主要讲在Linux（CentOS 7）下到安装：</p>
+<blockquote>
+<p>注意：这里讲到的安装前提是以前没有安装过Docker。</p>
+</blockquote>
+<h2 id="系统要求"><a href="#系统要求" class="headerlink" title="系统要求"></a>系统要求</h2><ul>
+<li>CentOS 7 64位及以上</li>
+<li>内核 &gt;= 3.10</li>
+</ul>
+<h2 id="使用yum安装"><a href="#使用yum安装" class="headerlink" title="使用yum安装"></a>使用yum安装</h2><p>首先安装以下依赖包：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># sudo yum install -y yum-utils \</span><br><span class="line">           device-mapper-persistent-data \</span><br><span class="line">           lvm2</span><br></pre></td></tr></table></figure>
+
+<p>添加yum安装源，任选其一，国内源会快些：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># sudo yum-config-manager \</span><br><span class="line">    --add-repo \</span><br><span class="line">    https:&#x2F;&#x2F;mirrors.ustc.edu.cn&#x2F;docker-ce&#x2F;linux&#x2F;centos&#x2F;docker-ce.repo</span><br><span class="line"></span><br><span class="line">官方源</span><br><span class="line"># sudo yum-config-manager \</span><br><span class="line">#     --add-repo \</span><br><span class="line">#     https:&#x2F;&#x2F;download.docker.com&#x2F;linux&#x2F;centos&#x2F;docker-ce.repo</span><br></pre></td></tr></table></figure>
+
+<p>安装Docker CE</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># sudo yum makecache fast</span><br><span class="line"># sudo yum install docker-ce</span><br></pre></td></tr></table></figure>
+
+<p>启用Docker CE：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># sudo systemctl enable docker</span><br><span class="line"># sudo systemctl start docker</span><br></pre></td></tr></table></figure>
+
+<p>默认情况下，只有root和docker用户组才能访问Docker引擎，因此需要将使用Docker的用户加入到Docker用户组中。</p>
+<p>建立docker组：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># sudo groupadd docker</span><br></pre></td></tr></table></figure>
+
+<p>添加当前用户至Docker组：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># sudo usermod -aG docker $USER</span><br></pre></td></tr></table></figure>
+
+<p>查看是否安装：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker info</span><br></pre></td></tr></table></figure>
+
+<p>同时我们还需要安装Docker-compose：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">注意：其中1.22.0是版本号，将其替换为最新的</span><br><span class="line"># sudo curl -L https:&#x2F;&#x2F;github.com&#x2F;docker&#x2F;compose&#x2F;releases&#x2F;download&#x2F;1.22.0&#x2F;docker-compose-&#96;uname -s&#96;-&#96;uname -m&#96; &gt; &#x2F;usr&#x2F;local&#x2F;bin&#x2F;docker-compose</span><br><span class="line"># sudo chmod +x &#x2F;usr&#x2F;local&#x2F;bin&#x2F;docker-compose</span><br></pre></td></tr></table></figure>
+
+<h1 id="使用Docker"><a href="#使用Docker" class="headerlink" title="使用Docker"></a>使用Docker</h1><h2 id="镜像"><a href="#镜像" class="headerlink" title="镜像"></a>镜像</h2><p>拉取镜像：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker pull [仓库名]:[标签]</span><br></pre></td></tr></table></figure>
+<p>例如，拉取版本为16.04的Ubuntu：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker pull ubuntu:16.04</span><br></pre></td></tr></table></figure>
+
+<p>列出本机所有的image（镜像）：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker image ls</span><br></pre></td></tr></table></figure>
+
+<p>删除本机指定镜像，其中，[镜像]值可以是镜像短ID、长ID、镜像名、镜像摘要：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker image rm [镜像]</span><br></pre></td></tr></table></figure>
+
+<h2 id="容器"><a href="#容器" class="headerlink" title="容器"></a>容器</h2><p>容器轻量到我们可以随时删除和启用它。</p>
+<p>新建及启用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker run [镜像名]</span><br></pre></td></tr></table></figure>
+
+<p>可能需要进入容器bash终端：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker run -t -i [镜像名] &#x2F;bin&#x2F;bash</span><br></pre></td></tr></table></figure>
+
+<p>查看当前运行的所有容器：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker container ls</span><br></pre></td></tr></table></figure>
+
+<p>终止一个容器，[容器名]值可以是镜像短ID、长ID、镜像名、镜像摘要：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker stop [容器名]</span><br></pre></td></tr></table></figure>
+
+<p>重启一个容器：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker restart [容器名]</span><br></pre></td></tr></table></figure>
+
+<p>删除指定的容器，需要先终止：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># docker container rm [容器名]</span><br></pre></td></tr></table></figure>
+
+<h1 id="最好的实践"><a href="#最好的实践" class="headerlink" title="最好的实践"></a>最好的实践</h1><blockquote>
+<p><a target="_blank" rel="noopener" href="https://github.com/khs1994-docker/lnmp">khs1994-docker/lnmp</a>是基于Docker Compose的一键搭建 LNMP(LEMP) 开发环境和生产环境(集群)的开源项目。</p>
+</blockquote>
+<p>该项目严禁直接编辑除 .env 文件以外的所有文件，目的是方便我们可以 <strong>无痛升级</strong> 。虽然如此，但是仍然可以实现全部的自定义功能，<a target="_blank" rel="noopener" href="https://github.com/khs1994-docker/lnmp/blob/master/docs/config.md">在这里</a>查看指南。</p>
+<h2 id="先决条件"><a href="#先决条件" class="headerlink" title="先决条件"></a>先决条件</h2><ul>
+<li>Docker CE 18.06 Stable +</li>
+<li>Docker Compose 1.22.0+</li>
+<li>WSL (Windows Only)</li>
+</ul>
+<h2 id="快速指南"><a href="#快速指南" class="headerlink" title="快速指南"></a>快速指南</h2><p>拉取项目到你想存放的指定(如：/var/www/example/)目录：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># git clone --depth&#x3D;1 --recursive https:&#x2F;&#x2F;code.aliyun.com&#x2F;khs1994-docker&#x2F;lnmp.git &#x2F;var&#x2F;www&#x2F;example&#x2F;</span><br></pre></td></tr></table></figure>
+
+<p>进入项目并启用一个Demo：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># cd &#x2F;var&#x2F;www&#x2F;example&#x2F;</span><br><span class="line"># .&#x2F;lnmp-docker up</span><br></pre></td></tr></table></figure>
+
+<p>启用后访问IP可得到如下信息即可正常运行：<br>Welcome use khs1994-docker/lnmp v18.10 x86_64 With Pull Docker Image development</p>
+<h2 id="数据库切换"><a href="#数据库切换" class="headerlink" title="数据库切换"></a>数据库切换</h2><p>编辑 .env 文件，修改变量 LNMP_MYSQL_VERSION 的值，这里我们把默认的版本降级为 5.6.41：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LNMP_MYSQL_VERSION&#x3D;5.6.41</span><br></pre></td></tr></table></figure>
+
+<p>注意，先前我们运行最新版的mysql，现在我们降级到 5.6.41 版本，导致数据不兼容，所以mysql容器没起来，所以需要先删除mysql数据卷，再启动：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># .&#x2F;lnmp-docker down -v</span><br><span class="line"># docker volume rm lnmp_mysql-data</span><br><span class="line"># .&#x2F;lnmp-docker up</span><br></pre></td></tr></table></figure>
+
+<p>而由于 mysql5.6.41 版本中不支持变量log_timestamps（5.7中新增），所以我们需要把该项目中该变量的定义注释掉：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># vi lnmp&#x2F;config&#x2F;mysql&#x2F;docker.cnf</span><br></pre></td></tr></table></figure>
+
+<p>注释其中的 log_timestamps=SYSTEM</p>
+<h2 id="SSl证书"><a href="#SSl证书" class="headerlink" title="SSl证书"></a>SSl证书</h2><p>该项目集成了acme.sh，<a target="_blank" rel="noopener" href="https://github.com/khs1994-docker/lnmp/blob/master/docs/nginx/issue-ssl.md">在这里</a>查看</p>
+<blockquote>
+<p>提示，<code>*.example.com</code> 的证书不支持 <code>example.com</code> 所以一个主域要写两次</p>
+</blockquote>
+<blockquote>
+<p>提示，第一个网址不用加 <code>-d</code> 参数，后面的需要加 <code>-d</code> 参数</p>
+</blockquote>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># .&#x2F;lnmp-docker ssl example.cn -d *.example.cn</span><br></pre></td></tr></table></figure>
+
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>这是第一次接触 Docker，不明之处还有很多，所以会持续学习并更新该文，谢谢大家的阅读！</p>
+</div><div class="tags"><a href="/tags/Docker/"><i class="fa fa-tag"></i>Docker</a></div><div class="post-nav"><a class="pre" href="/2018/12/23/WordPress-%E4%BC%98%E5%8C%96%E6%8C%87%E5%8D%97/">WordPress 优化指南</a><a class="next" href="/2018/07/06/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0%EF%BC%9APHP7%E5%86%85%E6%A0%B8%E5%89%96%E6%9E%90%EF%BC%88%E7%A7%A6%E6%9C%8B-%E8%91%97%EF%BC%89/">学习笔记：PHP7内核剖析（秦朋/著）</a></div></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="https://shangdev.github.io"/></form></div><div class="widget"><form class="search-form" action="//www.baidu.com/baidu" method="get" accept-charset="utf-8" target="_blank"><input type="search" name="word" maxlength="20" placeholder="Search"/><input type="hidden" name="si" value="https://shangdev.github.io"/><input name="tn" type="hidden" value="bds"/><input name="cl" type="hidden" value="3"/><input name="ct" type="hidden" value="2097152"/><input name="s" type="hidden" value="on"/></form></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> Kategorien</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/wordpress/">wordpress</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%89%8D%E7%AB%AF/">前端</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%90%8E%E7%AB%AF/">后端</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%B5%8F%E8%A7%88%E5%99%A8%E8%87%AA%E5%8A%A8%E5%8C%96/">浏览器自动化</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%B6%8A%E7%8B%B1/">越狱</a><ul class="category-list-child"><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%B6%8A%E7%8B%B1/%E5%BE%AE%E4%BF%A1/">微信</a></li></ul></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%BD%AF%E4%BB%B6%E4%BD%BF%E7%94%A8/">软件使用</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E8%BF%90%E7%BB%B4%E7%9B%B8%E5%85%B3/">运维相关</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> Tags</i></div><div class="tagcloud"><a href="/tags/PHP/" style="font-size: 15px;">PHP</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a> <a href="/tags/ExtJS/" style="font-size: 15px;">ExtJS</a> <a href="/tags/IOS/" style="font-size: 15px;">IOS</a> <a href="/tags/Https/" style="font-size: 15px;">Https</a> <a href="/tags/Npm/" style="font-size: 15px;">Npm</a> <a href="/tags/MySQL/" style="font-size: 15px;">MySQL</a> <a href="/tags/JS/" style="font-size: 15px;">JS</a> <a href="/tags/Puppeteer/" style="font-size: 15px;">Puppeteer</a> <a href="/tags/Nginx/" style="font-size: 15px;">Nginx</a> <a href="/tags/Docker/" style="font-size: 15px;">Docker</a> <a href="/tags/%E6%98%93%E8%AF%AD%E8%A8%80/" style="font-size: 15px;">易语言</a> <a href="/tags/WinHttp/" style="font-size: 15px;">WinHttp</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> Letzte</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2023/03/23/IOS%E5%BE%AE%E4%BF%A1%E5%A4%9A%E5%BC%80%E5%88%86%E8%BA%AB%E6%8C%87%E5%8D%97/">IOS微信多开分身指南</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/02/28/%E6%98%93%E8%AF%AD%E8%A8%80-%E7%BD%91%E9%A1%B5-%E8%AE%BF%E9%97%AE-%E5%AF%B9%E8%B1%A1-%E5%9C%A8windows-server-2008-R2%E4%B8%8A%E6%97%A0%E6%B3%95%E5%8F%91%E9%80%81https%E8%AF%B7%E6%B1%82%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">易语言 网页_访问_对象 在windows server 2008 R2上无法发送https请求的解决方案</a></li><li class="post-list-item"><a class="post-list-link" href="/2023/02/03/puppeteer%E5%AE%9E%E7%8E%B0%E6%B5%8F%E8%A7%88%E5%99%A8%E8%87%AA%E5%8A%A8%E5%8C%96%E5%92%8C%E7%88%AC%E8%99%AB%E7%9A%84%E4%B8%80%E4%BA%9B%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5/">puppeteer实现浏览器自动化和爬虫的一些最佳实践</a></li><li class="post-list-item"><a class="post-list-link" href="/2022/08/25/%E8%AE%B0%E4%B8%80%E6%AC%A1Mysql%E9%87%8D%E5%90%AF%E6%8A%A5%E9%94%99-The-server-quit-without-updating-PID-file-%E7%9A%84%E8%A7%A3%E5%86%B3/">记一次Mysql重启报错 The server quit without updating PID file 的解决</a></li><li class="post-list-item"><a class="post-list-link" href="/2021/10/12/%E8%A7%A3%E5%86%B3windows%E5%AE%89%E8%A3%85xampp%E5%90%8Emysql%E6%9F%A5%E8%AF%A2%E7%BC%93%E6%85%A2/">解决windows安装xampp后mysql语句查询缓慢</a></li><li class="post-list-item"><a class="post-list-link" href="/2021/08/27/Error-Tablespace-for-table-exists-Please-DISCARD-the-tablespace-before-IMPORT/">Error: Tablespace for table exists. Please DISCARD the tablespace before IMPORT</a></li><li class="post-list-item"><a class="post-list-link" href="/2021/07/21/phpoffice%E4%BD%BF%E7%94%A8%E8%AE%B0%E5%BD%95/">phpoffice使用记录</a></li><li class="post-list-item"><a class="post-list-link" href="/2021/07/21/PHP%E5%B0%86Word%E6%88%96Excel%E8%BD%ACPDF/">php将word或excel转pdf</a></li><li class="post-list-item"><a class="post-list-link" href="/2021/07/05/ExtJS4-2-1-%E4%BD%BF%E7%94%A8%E6%8A%80%E5%B7%A7/">ExtJS4.2.1 使用技巧</a></li><li class="post-list-item"><a class="post-list-link" href="/2020/12/01/%E4%BA%91%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%89%E5%85%A8%E9%98%B2%E6%8A%A4%E6%8C%87%E5%8D%97/">云服务器安全防护指南</a></li></ul></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2023 <a href="/." rel="nofollow">风吹叶落.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=0.0.0" async></script><script type="text/javascript" src="//cdn.jsdelivr.net/gh/fancyapps/fancybox/dist/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.0" async></script><link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox/dist/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js" successtext="Copy Successed!"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css"><script type="text/javascript" src="/js/codeblock-resizer.js?v=0.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=0.0.0"></script></div></body></html>
